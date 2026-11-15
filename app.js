@@ -2,10 +2,19 @@
 (function(){
 var $=function(s,r){return (r||document).querySelector(s)};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var RU2LAT={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya','ә':'a','і':'i','ң':'n','ғ':'g','ү':'u','ұ':'u','қ':'k','ө':'o','һ':'h'};
+var LAT2RU=[['shch','щ'],['yo','ё'],['yu','ю'],['ya','я'],['zh','ж'],['kh','х'],['ts','ц'],['ch','ч'],['sh','ш'],['ju','ю'],['ja','я'],['jo','ё'],['iu','ю'],['ia','я']];
+function toLat(s){return String(s||'').toLowerCase().replace(/[а-яёәіңғүұқөһ]/g,function(c){return RU2LAT[c]!==undefined?RU2LAT[c]:c})}
+function toCyr(s){s=String(s||'').toLowerCase();for(var i=0;i<LAT2RU.length;i++)s=s.split(LAT2RU[i][0]).join(LAT2RU[i][1]);var M={a:'а',b:'б',v:'в',g:'г',d:'д',e:'е',z:'з',i:'и',k:'к',l:'л',m:'м',n:'н',o:'о',p:'п',r:'р',s:'с',t:'т',u:'у',f:'ф',y:'й',c:'к',h:'х',w:'в',j:'ж',q:'к',x:'кс'};return s.replace(/[a-z]/g,function(c){return M[c]||c})}
+function latNorm(s){s=String(s||'').toLowerCase();s=s.replace(/skiy|skii|skij|sky/g,'ski');s=s.replace(/iy/g,'y');s=s.replace(/kh/g,'h');return s}
+function stripLegal(s){return String(s||'').toLowerCase().replace(/[«»""''`]/g,' ').replace(/\b(тоо|ао|ооо|оао|зао|llp|llc|jsc|inc|ltd|plc|ao|too|group|группа|компания|холдинг)\b/g,' ').replace(/\s+/g,' ').trim()}
+function fold(s){s=String(s==null?'':s);var a=stripLegal(s),lat=latNorm(toLat(a)),cyr=toCyr(a),dig=s.replace(/\D/g,'');if(/^8\d{10}$/.test(dig))dig='7'+dig.slice(1);return [a,lat,cyr,dig].filter(Boolean).join(' ')}
+function matchQ(hay,q){q=String(q||'').trim();if(!q)return true;return q.toLowerCase().split(/\s+/).every(function(w){if(!w)return true;var vars={},list=fold(w).split(/\s+/);list.push(w.toLowerCase());list.forEach(function(v){if(v)vars[v]=1});return Object.keys(vars).some(function(v){return hay.indexOf(v)>=0})})}
+
 var B=null; // decrypted bundle
 var IX={}; // indexes
 var TABS=[['deals','Сделки','\u{1F4BC}'],['co','Компании','\u{1F3E2}'],['si','Площадки','\u{1F4CD}'],['au','Аудиты','\u{1F4CB}'],['pp','ЛПР','\u{1F464}'],['le','Письма','\u2709\uFE0F'],['team','Команда','\u{1F465}']];
-var VERSION='e1bc3a0a';
+var VERSION='5a6b3921';
 // ---------- base64 / crypto ----------
 function b64d(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
 function idb(){return new Promise(function(res,rej){var r=indexedDB.open('crm100',1);r.onupgradeneeded=function(){r.result.createObjectStore('k')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
@@ -41,12 +50,12 @@ function buildIndex(){
   B.deals.forEach(function(d){push(IX.dBy,d.cid,d)});
   var rk={'решает':0,'закупки':1,'влияет':2,'союзник':3,'площадка':4},ck={'подтверждён':0,'вероятно':1,'возможно':2,'низкая':3,'':4};
   for(var k in IX.ppBy)IX.ppBy[k].sort(function(a,b){return (rk[a.r]==null?5:rk[a.r])-(rk[b.r]==null?5:rk[b.r])||(ck[a.c]-ck[b.c])||((b.e.length+b.t.length>0)-(a.e.length+a.t.length>0))});
-  function hay(o,f){return f.map(function(x){var v=o[x];return Array.isArray(v)?v.join(' '):v}).join(' ').toLowerCase()}
-  B.co.forEach(function(c){c._h=hay(c,['nm','seg','sub','k','reg','note'])});
+  function hay(o,f){var parts=f.map(function(x){var v=o[x];return Array.isArray(v)?v.join(' '): (v||'')});if(o.al)parts=parts.concat(o.al);if(o.src)parts.push(o.src);if(o.tag)parts.push(o.tag);var c=o.cid?IX.co[o.cid]:null;if(c){parts.push(c.nm);if(c.al)parts=parts.concat(c.al);if(c.tag)parts.push(c.tag)}return fold(parts.join(' '))}
+  B.co.forEach(function(c){c._h=hay(c,['nm','seg','sub','k','reg','note','sl'])});
   B.si.forEach(function(s){s._h=hay(s,['h','n','ci','rg','k'])});
   B.au.forEach(function(a){a._h=hay(a,['co','nm','work','win','sl'])});
-  B.pp.forEach(function(p){p._h=hay(p,['co','n','nt','p','r','e','t'])+' '+p.t.join(' ').replace(/[^\d]/g,'')});
-  B.le.forEach(function(l){l._h=('№'+l.no+' '+l.no+' '+hay(l,['co','to','st','nx','dt']))});
+  B.pp.forEach(function(p){p._h=hay(p,['co','n','nt','p','r','e','t','src'])});
+  B.le.forEach(function(l){l._h=fold('№'+l.no+' '+l.no+' '+[l.co,l.to,l.st,l.nx,l.dt].join(' '))});
   B.deals.forEach(function(d){d._h=hay(d,['co','st','what','nx'])});
   B.staff.forEach(function(s){s._h=hay(s,['n','r','t'])});
 }
@@ -126,8 +135,7 @@ function filtered(t){
     if(t==='au'&&f.pri&&o.pri!==f.pri)return false;
     if(t==='pp'){if(f.r&&o.r!==f.r)return false;if(f.c&&o.c!==f.c)return false;if(f.ct&&!(o.e.length||o.t.length))return false}
     if(t==='le'&&f.lst&&(ed('l'+o.no).st||o.st).toLowerCase().indexOf(f.lst.toLowerCase())!==0)return false;
-    for(var i=0;i<words.length;i++)if(o._h.indexOf(words[i])<0)return false;
-    return true})}
+    return matchQ(o._h,s.q)})}
 function cardHtml(t,o){
   var cl=o.ex?' ex':'';
   if(t==='co'){
@@ -176,14 +184,14 @@ function teamView(){
   var s=stOf('team');
   var h='<div class="h"><h2>Команда</h2></div><div class="filters"><div class="full"><input id="tq" type="search" placeholder="Имя, роль" value="'+esc(s.q)+'"></div></div><div id="tl" class="cards">'+teamList()+'</div><p class="muted" style="font-size:13px">Из плана адаптации. Только ФИО, роли и задачи, доступы не включены.</p>';
   return h}
-function teamList(){var q=stOf('team').q.toLowerCase();return B.staff.filter(function(x){return !q||x._h.indexOf(q)>=0}).map(function(x){return '<div class="card" style="cursor:default"><div class="t1"><span>'+esc(x.n)+'</span></div><div class="t2">'+esc(x.r)+'</div><div class="t3">'+esc(x.t)+'</div></div>'}).join('')}
+function teamList(){var q=stOf('team').q;return B.staff.filter(function(x){return !q||matchQ(x._h,q)}).map(function(x){return '<div class="card" style="cursor:default"><div class="t1"><span>'+esc(x.n)+'</span></div><div class="t2">'+esc(x.r)+'</div><div class="t3">'+esc(x.t)+'</div></div>'}).join('')}
 // ---------- company ----------
 function companyView(id){
   var c=IX.co[id];if(!c)return '<div class="empty">Компания не найдена</div>';
   var k='c'+id,e=ed(k);
   var h='<div class="h"><h2>'+esc(c.nm)+'</h2></div>';
   if(c.ex)h+='<div class="chips"><span class="chip er">исключён: не работаем</span></div>';
-  h+='<div class="kv"><div><span>Сегмент</span><em>'+esc(c.seg)+(c.sub?' · '+esc(c.sub):'')+'</em></div><div><span>Куст</span><em>'+esc(c.k)+'</em></div>'+(c.reg?'<div><span>Регион</span><em>'+esc(c.reg)+'</em></div>':'')+(c.note?'<div><span>Заметка</span><em>'+esc(c.note)+'</em></div>':'')+'</div>';
+  h+='<div class="kv"><div><span>Сегмент</span><em>'+esc(c.seg)+(c.sub?' · '+esc(c.sub):'')+'</em></div><div><span>Куст</span><em>'+esc(c.k)+'</em></div>'+(c.reg?'<div><span>Регион</span><em>'+esc(c.reg)+'</em></div>':'')+(c.al&&c.al.length?'<div><span>Также</span><em>'+esc(c.al.join(', '))+'</em></div>':'')+(c.note?'<div><span>Заметка</span><em>'+esc(c.note)+'</em></div>':'')+'</div>';
   h+='<div class="fld"><label>Статус</label><select data-ed="'+k+'" data-fld="st">'+opt(CO_ST,e.st||'','Не задан')+'</select></div><div class="fld"><label>Заметка</label><textarea data-ed="'+k+'" data-fld="nt" placeholder="Ваши пометки хранятся на этом устройстве">'+esc(e.nt||'')+'</textarea></div>';
   var ds=allDeals().filter(function(d){return d.cid===id});
   if(ds.length)h+='<div class="sec">Сделки</div><div class="cards">'+ds.map(dealCard).join('')+'</div>';
@@ -202,7 +210,7 @@ function closeSheet(){$('#sheet').hidden=true}
 function editor(k,list,label){var e=ed(k);return '<div class="fld"><label>'+(label||'Статус')+'</label><select data-ed="'+k+'" data-fld="st">'+opt(list,e.st||'','Не задан')+'</select></div><div class="fld"><label>Заметка</label><textarea data-ed="'+k+'" data-fld="nt" placeholder="Хранится на этом устройстве">'+esc(e.nt||'')+'</textarea></div>'}
 function personSheet(id){
   var p=B.pp[id-1];if(!p)return;
-  openSheet('<h3>'+esc(p.n)+'</h3><div class="muted">'+esc(p.p||'должность не указана')+'</div><div class="t3" style="margin:6px 0"><a href="#/company/'+p.cid+'" data-act="closeSheet">'+esc(p.co)+'</a></div><div class="chips">'+chip(p.r)+chip(p.c,p.c==='подтверждён'?'ok':'wa')+'</div>'+acts(p)+(p.nt?'<div class="t3" style="margin-top:8px">'+esc(p.nt)+'</div>':'')+(p.u?'<div class="t3"><a href="'+esc(p.u)+'" target="_blank" rel="noopener">Источник</a></div>':'')+editor('p'+id,PP_ST,'Статус контакта')+'<button class="btn" data-act="closeSheet" style="width:100%">Готово</button>')}
+  openSheet('<h3>'+esc(p.n)+'</h3><div class="muted">'+esc(p.p||'должность не указана')+'</div><div class="t3" style="margin:6px 0"><a href="#/company/'+p.cid+'" data-act="closeSheet">'+esc(p.co)+'</a></div><div class="chips">'+chip(p.r)+chip(p.c,p.c==='подтверждён'?'ok':'wa')+'</div>'+acts(p)+(p.nt?'<div class="t3" style="margin-top:8px">'+esc(p.nt)+'</div>':'')+(p.src?'<div class="t3">Источник: '+esc(p.src)+'</div>':'')+(p.u?'<div class="t3"><a href="'+esc(p.u)+'" target="_blank" rel="noopener">Ссылка</a></div>':'')+editor('p'+id,PP_ST,'Статус контакта')+'<button class="btn" data-act="closeSheet" style="width:100%">Готово</button>')}
 function letterSheet(no){
   var l=B.le.filter(function(x){return x.no==no})[0];if(!l)return;
   openSheet('<h3>Письмо №'+l.no+'</h3><div class="muted">'+esc(l.co)+'</div><div class="kv"><div><span>Дата</span><em>'+esc(l.dt)+'</em></div><div><span>Адресат</span><em>'+esc(l.to||'-')+'</em></div><div><span>Статус в базе</span><em>'+esc(l.st)+'</em></div><div><span>Шаг</span><em>'+esc(l.nx||'-')+'</em></div></div>'+(l.cid?'<a href="#/company/'+l.cid+'" data-act="closeSheet">Карточка компании</a>':'')+editor('l'+l.no,LE_ST,'Мой статус')+'<button class="btn" data-act="closeSheet" style="width:100%">Готово</button>')}
@@ -215,10 +223,9 @@ function newDealSheet(){
 // ---------- global search ----------
 function closeGS(){$('#gres').hidden=true;}
 function gsearch(q){
-  q=q.trim().toLowerCase();var box=$('#gres');
+  q=q.trim();var box=$('#gres');
   if(q.length<2){box.hidden=true;return}
-  var w=q.split(/\s+/);
-  function m(arr,lim){var r=[],n=0;for(var i=0;i<arr.length;i++){var o=arr[i];if(o.ex&&!LS.ex)continue;var ok=true;for(var j=0;j<w.length;j++)if(o._h.indexOf(w[j])<0){ok=false;break}if(ok){n++;if(r.length<lim)r.push(o)}}return [r,n]}
+  function m(arr,lim){var r=[],n=0;for(var i=0;i<arr.length;i++){var o=arr[i];if(o.ex&&!LS.ex)continue;if(matchQ(o._h,q)){n++;if(r.length<lim)r.push(o)}}return [r,n]}
   var out='';
   function sec(title,t,arr,lim){var x=m(arr,lim);if(!x[1])return;out+='<div class="sec">'+title+' ('+x[1]+')</div><div class="cards">'+x[0].map(function(o){return cardHtml(t,o)}).join('')+'</div>'+(x[1]>lim?'<a class="btn sm" href="#/'+t+'" data-act="seeAll" data-t="'+t+'" data-q="'+esc(q)+'">Все '+x[1]+' в разделе</a>':'')}
   var dl=allDeals();dl.forEach(function(d){if(!d._h)d._h=(d.co+' '+d.what+' '+d.nx).toLowerCase()});
