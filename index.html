@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CRM 100tonn</title>
+<meta name="theme-color" content="#0f2a43">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CRM 100tonn">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="lock" class="lock" hidden>
+  <form id="lockForm" class="lock-box" autocomplete="off">
+    <img src="icons/icon-192.png" width="72" height="72" alt="">
+    <h1>CRM 100tonn</h1>
+    <p class="muted">Данные зашифрованы. Введите ключевую фразу.</p>
+    <input id="pass" type="password" placeholder="Ключевая фраза" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label class="chk"><input id="remember" type="checkbox" checked> Запомнить на этом устройстве</label>
+    <button class="btn primary" type="submit">Открыть</button>
+    <p id="lockErr" class="err"></p>
+  </form>
+</div>
+<div id="app" class="app" hidden>
+  <aside class="side">
+    <div class="brand"><img src="icons/icon-192.png" width="36" height="36" alt=""><span>CRM 100tonn</span></div>
+    <nav id="navSide"></nav>
+    <div class="side-foot muted" id="verSide"></div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <button id="backBtn" class="icon-btn" hidden aria-label="Назад">&#8592;</button>
+      <input id="gq" class="gsearch" type="search" placeholder="Поиск по всей базе" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="menuBtn" class="icon-btn" aria-label="Меню">&#9881;</button>
+    </header>
+    <div id="gres" class="gres" hidden></div>
+    <main id="view" class="view"></main>
+  </div>
+  <nav id="navBot" class="bot"></nav>
+</div>
+<div id="sheet" class="sheet" hidden><div class="sheet-bg" data-act="closeSheet"></div><div class="sheet-body" id="sheetBody"></div></div>
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
