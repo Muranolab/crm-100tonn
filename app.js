@@ -11,10 +11,14 @@ function stripLegal(s){return String(s||'').toLowerCase().replace(/[«»""''`]/g
 function fold(s){s=String(s==null?'':s);var a=stripLegal(s),lat=latNorm(toLat(a)),cyr=toCyr(a),dig=s.replace(/\D/g,'');if(/^8\d{10}$/.test(dig))dig='7'+dig.slice(1);return [a,lat,cyr,dig].filter(Boolean).join(' ')}
 function matchQ(hay,q){q=String(q||'').trim();if(!q)return true;return q.toLowerCase().split(/\s+/).every(function(w){if(!w)return true;var vars={},list=fold(w).split(/\s+/);list.push(w.toLowerCase());list.forEach(function(v){if(v)vars[v]=1});return Object.keys(vars).some(function(v){return hay.indexOf(v)>=0})})}
 
+function coRu(c){return (c&&(c.nm_ru||c.nm))||''}
+function coEn(c){return (c&&c.nm_en)||''}
+function coTitleHtml(c){var ru=coRu(c),en=coEn(c);var h=esc(ru);if(en&&en!==ru)h+='<span class="en">'+esc(en)+'</span>';return h}
+
 var B=null; // decrypted bundle
 var IX={}; // indexes
 var TABS=[['deals','Сделки','\u{1F4BC}'],['co','Компании','\u{1F3E2}'],['si','Площадки','\u{1F4CD}'],['au','Аудиты','\u{1F4CB}'],['pp','ЛПР','\u{1F464}'],['le','Письма','\u2709\uFE0F'],['team','Команда','\u{1F465}']];
-var VERSION='5a6b3921';
+var VERSION='b33ff085';
 // ---------- base64 / crypto ----------
 function b64d(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
 function idb(){return new Promise(function(res,rej){var r=indexedDB.open('crm100',1);r.onupgradeneeded=function(){r.result.createObjectStore('k')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
@@ -51,7 +55,7 @@ function buildIndex(){
   var rk={'решает':0,'закупки':1,'влияет':2,'союзник':3,'площадка':4},ck={'подтверждён':0,'вероятно':1,'возможно':2,'низкая':3,'':4};
   for(var k in IX.ppBy)IX.ppBy[k].sort(function(a,b){return (rk[a.r]==null?5:rk[a.r])-(rk[b.r]==null?5:rk[b.r])||(ck[a.c]-ck[b.c])||((b.e.length+b.t.length>0)-(a.e.length+a.t.length>0))});
   function hay(o,f){var parts=f.map(function(x){var v=o[x];return Array.isArray(v)?v.join(' '): (v||'')});if(o.al)parts=parts.concat(o.al);if(o.src)parts.push(o.src);if(o.tag)parts.push(o.tag);var c=o.cid?IX.co[o.cid]:null;if(c){parts.push(c.nm);if(c.al)parts=parts.concat(c.al);if(c.tag)parts.push(c.tag)}return fold(parts.join(' '))}
-  B.co.forEach(function(c){c._h=hay(c,['nm','seg','sub','k','reg','note','sl'])});
+  B.co.forEach(function(c){c._h=hay(c,['nm','nm_ru','nm_en','seg','sub','k','reg','sl'])});
   B.si.forEach(function(s){s._h=hay(s,['h','n','ci','rg','k'])});
   B.au.forEach(function(a){a._h=hay(a,['co','nm','work','win','sl'])});
   B.pp.forEach(function(p){p._h=hay(p,['co','n','nt','p','r','e','t','src'])});
@@ -139,7 +143,7 @@ function filtered(t){
 function cardHtml(t,o){
   var cl=o.ex?' ex':'';
   if(t==='co'){
-    return '<a class="card'+cl+'" href="#/company/'+o.id+'"><div class="t1"><span>'+esc(o.nm)+'</span>'+stChip('c'+o.id)+'</div><div class="t2">'+esc(o.seg)+(o.sub?' · '+esc(o.sub):'')+'</div><div class="chips">'+chip(o.k)+(o.reg?chip(o.reg):'')+(o.ad?chip('аудит','ok'):'')+(o.np?chip('ЛПР '+o.np):'')+(o.let.length?chip('письма '+o.let.join(', '),'ac'):'')+(o.ex?chip('исключён','er'):'')+'</div>'+ntLine('c'+o.id)+'</a>'}
+    var en=coEn(o);return '<a class="card'+cl+'" href="#/company/'+o.id+'"><div class="t1"><span>'+esc(coRu(o))+(en&&en!==coRu(o)?'<span class="t1en">'+esc(en)+'</span>':'')+'</span>'+stChip('c'+o.id)+'</div><div class="t2">'+esc(o.seg)+(o.sub?' · '+esc(o.sub):'')+'</div><div class="chips">'+chip(o.k)+(o.reg?chip(o.reg):'')+(o.ad?chip('аудит','ok'):'')+(o.np?chip('ЛПР '+o.np):'')+(o.let.length?chip('письма '+o.let.join(', '),'ac'):'')+(o.ex?chip('исключён','er'):'')+'</div>'+ntLine('c'+o.id)+'</a>'}
   if(t==='si'){
     return '<a class="card" '+(o.cid?'href="#/company/'+o.cid+'"':'')+'><div class="t1"><span>'+esc(o.n)+'</span>'+stChip('s'+o.id)+'</div><div class="t2">'+esc(o.h)+'</div><div class="chips">'+chip(o.ci)+chip(o.rg)+chip(o.k)+'</div></a>'}
   if(t==='au'){
@@ -189,9 +193,11 @@ function teamList(){var q=stOf('team').q;return B.staff.filter(function(x){retur
 function companyView(id){
   var c=IX.co[id];if(!c)return '<div class="empty">Компания не найдена</div>';
   var k='c'+id,e=ed(k);
-  var h='<div class="h"><h2>'+esc(c.nm)+'</h2></div>';
+  var shown={},alShow=[];[coRu(c),coEn(c),c.nm].forEach(function(x){if(x)shown[x.toLowerCase()]=1});
+  (c.al||[]).forEach(function(a){if(a&&!shown[a.toLowerCase()]){shown[a.toLowerCase()]=1;alShow.push(a)}});
+  var h='<div class="h"><h2>'+coTitleHtml(c)+'</h2></div>';
   if(c.ex)h+='<div class="chips"><span class="chip er">исключён: не работаем</span></div>';
-  h+='<div class="kv"><div><span>Сегмент</span><em>'+esc(c.seg)+(c.sub?' · '+esc(c.sub):'')+'</em></div><div><span>Куст</span><em>'+esc(c.k)+'</em></div>'+(c.reg?'<div><span>Регион</span><em>'+esc(c.reg)+'</em></div>':'')+(c.al&&c.al.length?'<div><span>Также</span><em>'+esc(c.al.join(', '))+'</em></div>':'')+(c.note?'<div><span>Заметка</span><em>'+esc(c.note)+'</em></div>':'')+'</div>';
+  h+='<div class="kv"><div><span>Сегмент</span><em>'+esc(c.seg)+(c.sub?' · '+esc(c.sub):'')+'</em></div><div><span>Куст</span><em>'+esc(c.k)+'</em></div>'+(c.reg?'<div><span>Регион</span><em>'+esc(c.reg)+'</em></div>':'')+(alShow.length?'<div><span>Также</span><em>'+esc(alShow.join(', '))+'</em></div>':'')+(c.note?'<div><span>Заметка</span><em>'+esc(c.note)+'</em></div>':'')+'</div>';
   h+='<div class="fld"><label>Статус</label><select data-ed="'+k+'" data-fld="st">'+opt(CO_ST,e.st||'','Не задан')+'</select></div><div class="fld"><label>Заметка</label><textarea data-ed="'+k+'" data-fld="nt" placeholder="Ваши пометки хранятся на этом устройстве">'+esc(e.nt||'')+'</textarea></div>';
   var ds=allDeals().filter(function(d){return d.cid===id});
   if(ds.length)h+='<div class="sec">Сделки</div><div class="cards">'+ds.map(dealCard).join('')+'</div>';
@@ -267,7 +273,7 @@ document.addEventListener('click',function(ev){
     else if(act==='deal'){dealSheet(id)}
     else if(act==='newDeal'){newDealSheet()}
     else if(act==='saveDeal'){var co=$('#nd_co').value.trim();if(!co){toast('Укажите компанию');return}var d={id:'u'+Date.now(),u:1,co:co,what:$('#nd_what').value.trim(),nx:$('#nd_nx').value.trim(),dt:$('#nd_dt').value.trim(),st:$('#nd_st').value,cid:0};
-      var m=B.co.filter(function(c){return c.nm.toLowerCase().indexOf(co.toLowerCase())>=0})[0];if(m)d.cid=m.id;LS.deals.push(d);lsSave();closeSheet();render()}
+      var q=co.toLowerCase();var m=B.co.filter(function(c){return [c.nm,c.nm_ru,c.nm_en].concat(c.al||[]).some(function(n){return n&&n.toLowerCase().indexOf(q)>=0})})[0];if(m)d.cid=m.id;LS.deals.push(d);lsSave();closeSheet();render()}
     else if(act==='delDeal'){LS.deals=LS.deals.filter(function(x){return x.id!==id});delete LS.ed['d'+id];lsSave();closeSheet();render()}
     else if(act==='export'){exportJson()}
     else if(act==='import'){$('#impf').click();$('#impf').onchange=function(e){if(e.target.files[0])importJson(e.target.files[0])}}

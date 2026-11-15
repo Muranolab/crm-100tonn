@@ -31,7 +31,7 @@ textarea{min-height:90px;resize:vertical}
 .bot a b{font-size:19px;font-weight:400;line-height:1.1}
 .bot a.on{color:var(--ac);font-weight:700}
 .h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 10px}
-.h h2{margin:0;font-size:20px}
+.h h2{margin:0;font-size:20px;overflow-wrap:anywhere;flex:1}.h h2 .en{display:block;font-size:15px;font-weight:600;color:var(--mu);margin-top:3px}.card .t1en{display:block;font-weight:500;color:var(--mu);font-size:13px;margin-top:1px;overflow-wrap:anywhere}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
 .metric{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:10px}
 .metric b{display:block;font-size:20px}.metric span{font-size:12px;color:var(--mu)}

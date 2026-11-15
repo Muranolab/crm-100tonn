@@ -1,5 +1,5 @@
 'use strict';
-var V='crm100-2-5a6b3921';
+var V='crm100-3-b33ff085';
 var SHELL=['./','index.html','app.css','app.js','manifest.json','data.enc','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png','icons/favicon-32.png'];
 self.addEventListener('install',function(e){
   e.waitUntil(caches.open(V).then(function(c){return Promise.all(SHELL.map(function(u){return fetch(new Request(u,{cache:'reload'})).then(function(r){if(r.ok)return c.put(u,r)}).catch(function(){})}))}).then(function(){return self.skipWaiting()}))});
