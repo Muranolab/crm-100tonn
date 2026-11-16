@@ -18,7 +18,7 @@ function coTitleHtml(c){var ru=coRu(c),en=coEn(c);var h=esc(ru);if(en&&en!==ru)h
 var B=null; // decrypted bundle
 var IX={}; // indexes
 var TABS=[['deals','Сделки','\u{1F4BC}'],['co','Компании','\u{1F3E2}'],['si','Площадки','\u{1F4CD}'],['au','Аудиты','\u{1F4CB}'],['pp','ЛПР','\u{1F464}'],['le','Письма','\u2709\uFE0F'],['team','Команда','\u{1F465}']];
-var VERSION='9b74189a';
+var VERSION='3c3bf6ad';
 // ---------- base64 / crypto ----------
 function b64d(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
 function idb(){return new Promise(function(res,rej){var r=indexedDB.open('crm100',1);r.onupgradeneeded=function(){r.result.createObjectStore('k')};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
